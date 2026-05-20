@@ -13,7 +13,9 @@ import { checkRateLimit, incrementUsage } from "../pipeline/limits";
 
 export const dreamRoutes = new Hono<AppContext>();
 
-const MAX_AUDIO_BYTES = 200_000;
+// 20s of browser opus/aac at typical bitrates ≈ 200-400KB. 1MB gives headroom
+// without inviting abuse (the 15s client cap is the real length limit).
+const MAX_AUDIO_BYTES = 1_000_000;
 
 dreamRoutes.post("/", async (c) => {
   const form = await c.req.formData();

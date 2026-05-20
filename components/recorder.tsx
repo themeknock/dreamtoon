@@ -225,9 +225,11 @@ export function Recorder() {
       });
       const mime = pickMimeType();
       mimeRef.current = mime;
-      const rec = mime
-        ? new MediaRecorder(mediaStream, { mimeType: mime })
-        : new MediaRecorder(mediaStream);
+      // Cap bitrate so a 15s clip stays well under the server limit + uploads
+      // fast on mobile. 48kbps opus/aac is plenty for speech → Whisper.
+      const recOpts: MediaRecorderOptions = { audioBitsPerSecond: 48000 };
+      if (mime) recOpts.mimeType = mime;
+      const rec = new MediaRecorder(mediaStream, recOpts);
 
       chunksRef.current = [];
       rec.ondataavailable = (e) => {
