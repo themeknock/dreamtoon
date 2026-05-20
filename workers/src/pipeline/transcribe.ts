@@ -25,14 +25,12 @@ export async function transcribeAudio(
   return text.trim();
 }
 
-const NONSENSE_RATIO_THRESHOLD = 0.4;
-
 export function looksLikeSpeech(transcript: string): boolean {
   const cleaned = transcript.trim();
-  if (cleaned.length < 8) return false;
+  if (cleaned.length < 3) return false;
+  // Script-agnostic: count tokens containing any Unicode letter (Urdu, Arabic,
+  // Hindi, Latin, …). The old ASCII-only check rejected every non-English dream.
   const tokens = cleaned.split(/\s+/);
-  if (tokens.length < 3) return false;
-  const wordish = tokens.filter((t) => /^[a-zA-Z][a-zA-Z'-]*$/.test(t)).length;
-  const ratio = wordish / tokens.length;
-  return ratio >= NONSENSE_RATIO_THRESHOLD;
+  const wordish = tokens.filter((t) => /\p{L}/u.test(t)).length;
+  return wordish >= 2;
 }

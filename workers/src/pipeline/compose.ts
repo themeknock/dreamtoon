@@ -93,6 +93,12 @@ When refusing, write safety.message as a short friendly sentence addressed to th
 
 WHEN A NAMED IP OR REAL PERSON APPEARS BUT IS THE ONLY ISSUE: do NOT refuse. Silently rewrite to a generic equivalent in the panel prompts and proceed. Refusal is reserved for the harder categories above.
 
+LANGUAGE
+- The dream transcript may be in ANY language (Urdu, Hindi, Arabic, Spanish, …).
+  Understand it in its original language, but ALWAYS write character_sheet,
+  art_direction, and every panel.prompt in ENGLISH (the image model needs
+  English). safety.message may stay simple English.
+
 PROMPT QUALITY
 - Each panel.prompt is ~80-140 words.
 - Always include camera direction, lighting, and emotional tone.
