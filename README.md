@@ -1,6 +1,13 @@
 # DreamToon
 
-**Describe your dream out loud. Get a 4-panel comic.**
+**Talk. Get a comic.** Describe your dream out loud — get a 4-panel comic.
+
+### ▶ [Try it live → themeknock.github.io/dreamtoon](https://themeknock.github.io/dreamtoon/)
+
+Free, no signup. Tap the mic, talk for 15 seconds, watch your dream get drawn.
+3 comics/day. Works best on a phone (Chrome / Safari) with mic access.
+
+> Frontend: GitHub Pages (static). Backend: Cloudflare Workers (`dreamtoon-api.themeknock.workers.dev`) — Whisper + OpenRouter scene composer + Flux Schnell, all on the edge.
 
 Voice-in, comic-out. Sub-30-second loop. Hit record, talk for 15 seconds about the dream you had last night, and DreamToon hands you a 1080×1080 four-panel comic strip — Instagram-Story-native, screenshot-friendly, share-or-die.
 
