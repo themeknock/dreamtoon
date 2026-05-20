@@ -65,7 +65,7 @@ export const comics = sqliteTable(
     panel3R2Key: text("panel3_r2_key").notNull(),
     panel4R2Key: text("panel4_r2_key").notNull(),
     style: text("style", {
-      enum: ["line-art", "oil", "pixel", "watercolor"],
+      enum: ["watercolor", "line-art", "oil", "pixel", "realistic"],
     })
       .notNull()
       .default("watercolor"),

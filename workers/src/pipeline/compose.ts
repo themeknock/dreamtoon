@@ -12,7 +12,13 @@ export const RefusalCategory = z.enum([
 ]);
 export type RefusalCategory = z.infer<typeof RefusalCategory>;
 
-export const StyleEnum = z.enum(["line-art", "oil", "pixel", "watercolor"]);
+export const StyleEnum = z.enum([
+  "watercolor",
+  "line-art",
+  "oil",
+  "pixel",
+  "realistic",
+]);
 export type Style = z.infer<typeof StyleEnum>;
 
 const PanelSchema = z.object({
@@ -45,6 +51,8 @@ const STYLE_ANCHORS: Record<Style, string> = {
     "oil painting, thick impasto strokes, warm umber + ochre palette, brush-visible edges, soft chiaroscuro lighting, no digital sharpness",
   pixel:
     "16-bit era pixel art, crisp dithering, 32x32 sprite logic, limited 12-color palette, subtle scanline texture",
+  realistic:
+    "cinematic photographic still, natural lighting, shallow depth of field, soft film grain, realistic textures and proportions, color-graded like a movie frame — stylized realism, NOT a real photograph of any identifiable real person",
 };
 
 const SYSTEM_PROMPT = `You are DreamToon's scene composer. You convert a short spoken dream description into a precise 4-panel comic specification.
@@ -102,7 +110,10 @@ LANGUAGE
 PROMPT QUALITY
 - Each panel.prompt is ~80-140 words.
 - Always include camera direction, lighting, and emotional tone.
-- No real-photo cues. Always reinforce: "illustrated comic panel, hand-drawn".`;
+- Match the chosen style anchor. For illustration styles (watercolor, line-art,
+  oil, pixel) reinforce "illustrated, hand-drawn, not a photo". For the
+  "realistic" style use cinematic/photographic cues instead. Either way, NEVER
+  aim for a deceptive likeness of a real, identifiable person.`;
 
 function buildUserMessage(transcript: string, style: Style): string {
   return `Style anchor: ${STYLE_ANCHORS[style]}

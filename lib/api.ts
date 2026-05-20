@@ -8,7 +8,7 @@ export function workerUrl(path: string): string {
 
 export type ComicMeta = {
   id: string;
-  style: "watercolor" | "line-art" | "oil" | "pixel";
+  style: "watercolor" | "line-art" | "oil" | "pixel" | "realistic";
   shareCount: number;
   viewCount: number;
   gallery: boolean;

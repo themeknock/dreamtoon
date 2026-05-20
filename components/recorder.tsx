@@ -21,6 +21,8 @@ import { RecordButton } from "@/components/record-button";
 import { Waveform } from "@/components/waveform";
 import { StatusStream } from "@/components/status-stream";
 import { PanelPreview } from "@/components/panel-preview";
+import { StylePicker } from "@/components/style-picker";
+import { DEFAULT_STYLE, type DreamStyle } from "@/lib/styles";
 import type { Stage } from "@/lib/status-copy";
 
 type RecorderState =
@@ -44,6 +46,8 @@ export function Recorder() {
   const [state, setState] = useState<RecorderState>({ kind: "idle" });
   const [elapsed, setElapsed] = useState(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [style, setStyle] = useState<DreamStyle>(DEFAULT_STYLE);
+  const styleRef = useRef<DreamStyle>(DEFAULT_STYLE);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -104,7 +108,7 @@ export function Recorder() {
 
       try {
         const fd = audioBlobToFormData(blob);
-        fd.append("style", "watercolor");
+        fd.append("style", styleRef.current);
 
         const res = await fetch(workerUrl("/api/dream"), {
           method: "POST",
@@ -351,8 +355,23 @@ export function Recorder() {
           ? "processing"
           : state.kind;
 
+  const showPicker =
+    state.kind === "idle" ||
+    state.kind === "error" ||
+    state.kind === "refusal";
+
   return (
-    <div className="flex flex-col items-center gap-8">
+    <div className="flex flex-col items-center gap-7">
+      {showPicker && (
+        <StylePicker
+          value={style}
+          onChange={(s) => {
+            setStyle(s);
+            styleRef.current = s;
+          }}
+        />
+      )}
+
       <RecordButton
         state={buttonState}
         elapsedMs={elapsed}
