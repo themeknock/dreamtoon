@@ -16,10 +16,12 @@ export const dreamRoutes = new Hono<AppContext>();
 // 20s of browser opus/aac at typical bitrates ≈ 200-400KB. 1MB gives headroom
 // without inviting abuse (the 15s client cap is the real length limit).
 const MAX_AUDIO_BYTES = 1_000_000;
+const MAX_TEXT_CHARS = 1000;
 
 dreamRoutes.post("/", async (c) => {
   const form = await c.req.formData();
   const audio = form.get("audio");
+  const textRaw = (form.get("text") as string | null)?.trim() ?? "";
   const styleRaw = (form.get("style") as string) || "watercolor";
   const styleParsed = StyleEnum.safeParse(styleRaw);
   if (!styleParsed.success) {
@@ -33,15 +35,25 @@ dreamRoutes.post("/", async (c) => {
     "arrayBuffer" in audio &&
     typeof (audio as { arrayBuffer?: unknown }).arrayBuffer === "function" &&
     typeof (audio as { size?: unknown }).size === "number";
-  if (!isBlobLike) {
-    return c.json({ error: "audio_required" }, 400);
-  }
-  const audioBlob = audio as unknown as Blob;
-  if (audioBlob.size > MAX_AUDIO_BYTES) {
-    return c.json({ error: "audio_too_long" }, 413);
-  }
-  if (audioBlob.size < 500) {
-    return c.json({ error: "audio_too_short" }, 400);
+
+  // Two input modes: audio (voice) or text (typed). Text skips R2 + Whisper.
+  const mode: "audio" | "text" = isBlobLike ? "audio" : "text";
+  const audioBlob = isBlobLike ? (audio as unknown as Blob) : null;
+
+  if (mode === "audio") {
+    if (audioBlob!.size > MAX_AUDIO_BYTES) {
+      return c.json({ error: "audio_too_long" }, 413);
+    }
+    if (audioBlob!.size < 500) {
+      return c.json({ error: "audio_too_short" }, 400);
+    }
+  } else {
+    if (textRaw.length < 4) {
+      return c.json({ error: "text_too_short" }, 400);
+    }
+    if (textRaw.length > MAX_TEXT_CHARS) {
+      return c.json({ error: "text_too_long" }, 413);
+    }
   }
 
   const ip = c.req.header("cf-connecting-ip") ?? "0.0.0.0";
@@ -74,24 +86,31 @@ dreamRoutes.post("/", async (c) => {
       sse.writeSSE({ event, data: JSON.stringify(data) });
 
     const t0 = Date.now();
-    let stage = "audio";
+    let stage: string = mode;
     try {
-      await emit("status", { stage: "listening", dreamId });
+      let transcript: string;
+      let audioR2Key = "text-input";
 
-      const audioBytes = new Uint8Array(await audioBlob.arrayBuffer());
-      const audioR2Key = `audio-recordings/${dreamId}.webm`;
-      await c.env.AUDIO_BUCKET.put(audioR2Key, audioBytes, {
-        httpMetadata: { contentType: audioBlob.type || "audio/webm" },
-      });
-
-      stage = "transcribe";
-      const transcript = await transcribeAudio(c.env, audioBytes);
-      if (!looksLikeSpeech(transcript)) {
-        await emit("error", {
-          code: "no_speech",
-          message: "Couldn't quite hear that — give it another go?",
+      if (mode === "audio") {
+        await emit("status", { stage: "listening", dreamId });
+        const audioBytes = new Uint8Array(await audioBlob!.arrayBuffer());
+        audioR2Key = `audio-recordings/${dreamId}.webm`;
+        await c.env.AUDIO_BUCKET.put(audioR2Key, audioBytes, {
+          httpMetadata: { contentType: audioBlob!.type || "audio/webm" },
         });
-        return;
+
+        stage = "transcribe";
+        transcript = await transcribeAudio(c.env, audioBytes);
+        if (!looksLikeSpeech(transcript)) {
+          await emit("error", {
+            code: "no_speech",
+            message: "Couldn't quite hear that — give it another go?",
+          });
+          return;
+        }
+      } else {
+        // Text mode — use the typed dream directly, no audio, no Whisper.
+        transcript = textRaw;
       }
 
       await db(c.env).insert(dreams).values({

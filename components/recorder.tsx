@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ExternalLink, Phone } from "lucide-react";
+import { AlertTriangle, ExternalLink, Phone, Mic, Type } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   MAX_RECORD_MS,
   audioBlobToFormData,
@@ -48,6 +49,8 @@ export function Recorder() {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [style, setStyle] = useState<DreamStyle>(DEFAULT_STYLE);
   const styleRef = useRef<DreamStyle>(DEFAULT_STYLE);
+  const [mode, setMode] = useState<"voice" | "text">("voice");
+  const [textValue, setTextValue] = useState("");
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -95,8 +98,8 @@ export function Recorder() {
     };
   }, [clearTimers]);
 
-  const uploadAndStream = useCallback(
-    async (blob: Blob) => {
+  const submitDream = useCallback(
+    async (fd: FormData) => {
       setState({
         kind: "processing",
         stage: "uploading",
@@ -107,7 +110,6 @@ export function Recorder() {
       abortRef.current = ac;
 
       try {
-        const fd = audioBlobToFormData(blob);
         fd.append("style", styleRef.current);
 
         const res = await fetch(workerUrl("/api/dream"), {
@@ -255,7 +257,7 @@ export function Recorder() {
           });
           return;
         }
-        await uploadAndStream(blob);
+        await submitDream(audioBlobToFormData(blob));
       };
 
       rec.start();
@@ -295,12 +297,20 @@ export function Recorder() {
         transcript: undefined,
       });
     }
-  }, [state.kind, clearTimers, cleanupStream, uploadAndStream]);
+  }, [state.kind, clearTimers, cleanupStream, submitDream]);
 
   const stop = useCallback(() => {
     const rec = recorderRef.current;
     if (rec && rec.state === "recording") rec.stop();
   }, []);
+
+  const submitText = useCallback(async () => {
+    const text = textValue.trim();
+    if (text.length < 4) return;
+    const fd = new FormData();
+    fd.append("text", text);
+    await submitDream(fd);
+  }, [textValue, submitDream]);
 
   const reset = useCallback(() => {
     abortRef.current?.abort();
@@ -363,22 +373,76 @@ export function Recorder() {
   return (
     <div className="flex flex-col items-center gap-7">
       {showPicker && (
-        <StylePicker
-          value={style}
-          onChange={(s) => {
-            setStyle(s);
-            styleRef.current = s;
-          }}
+        <div className="flex flex-col items-center gap-4">
+          <div className="inline-flex rounded-full border border-rule bg-paper/70 p-1">
+            {(["voice", "text"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMode(m)}
+                className={cn(
+                  "mono inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[11px] uppercase tracking-[0.1em] transition-colors",
+                  mode === m
+                    ? "bg-ink text-paper"
+                    : "text-mute hover:text-ink",
+                )}
+              >
+                {m === "voice" ? (
+                  <Mic className="h-3.5 w-3.5" strokeWidth={1.75} />
+                ) : (
+                  <Type className="h-3.5 w-3.5" strokeWidth={1.75} />
+                )}
+                {m === "voice" ? "Speak" : "Type"}
+              </button>
+            ))}
+          </div>
+          <StylePicker
+            value={style}
+            onChange={(s) => {
+              setStyle(s);
+              styleRef.current = s;
+            }}
+          />
+        </div>
+      )}
+
+      {mode === "voice" && (
+        <RecordButton
+          state={buttonState}
+          elapsedMs={elapsed}
+          maxMs={MAX_RECORD_MS}
+          onPress={start}
+          onStop={stop}
         />
       )}
 
-      <RecordButton
-        state={buttonState}
-        elapsedMs={elapsed}
-        maxMs={MAX_RECORD_MS}
-        onPress={start}
-        onStop={stop}
-      />
+      {mode === "text" && showPicker && (
+        <div className="flex w-full max-w-[440px] flex-col items-center gap-3">
+          <textarea
+            value={textValue}
+            onChange={(e) => setTextValue(e.target.value.slice(0, 1000))}
+            placeholder="Type your dream… e.g. I was flying over a city made of bread."
+            rows={3}
+            className="w-full resize-none rounded-lg border border-rule bg-paper p-4 text-[15px] leading-relaxed text-ink outline-none placeholder:text-mute focus:border-accent"
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") submitText();
+            }}
+          />
+          <div className="flex w-full items-center justify-between">
+            <span className="mono text-[10px] uppercase tracking-[0.12em] text-mute">
+              {textValue.trim().length}/1000
+            </span>
+            <button
+              type="button"
+              disabled={textValue.trim().length < 4}
+              onClick={submitText}
+              className="mono inline-flex items-center gap-2 rounded-full px-5 py-2 text-[12px] uppercase tracking-[0.1em] text-paper transition-[filter] [background-image:var(--dream-gradient)] hover:brightness-110 disabled:opacity-40"
+            >
+              Draw it →
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex h-20 w-full max-w-[440px] items-center justify-center">
         {state.kind === "recording" && (
