@@ -72,14 +72,9 @@ dreamRoutes.post("/", async (c) => {
   const comicId = nanoid(12);
 
   // SSE responses bypass the global cors middleware's header injection, so
-  // set the CORS headers explicitly here or the browser blocks the stream
-  // ("Failed to fetch") on cross-origin requests.
-  const origin = c.req.header("Origin");
-  if (origin) {
-    c.header("Access-Control-Allow-Origin", origin);
-    c.header("Access-Control-Allow-Credentials", "true");
-    c.header("Vary", "Origin");
-  }
+  // set CORS explicitly here. Wide-open, no credentials — robust against the
+  // "Failed to fetch" class of failures.
+  c.header("Access-Control-Allow-Origin", "*");
 
   return streamSSE(c, async (sse) => {
     const emit = (event: string, data: object) =>

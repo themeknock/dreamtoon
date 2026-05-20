@@ -112,12 +112,25 @@ export function Recorder() {
       try {
         fd.append("style", styleRef.current);
 
-        const res = await fetch(workerUrl("/api/dream"), {
-          method: "POST",
-          body: fd,
-          credentials: "include",
-          signal: ac.signal,
-        });
+        // FormData is reusable across fetch calls (re-serialized each time),
+        // so we can safely retry once if the initial request never reaches the
+        // server (network blip / cold start) — no comic is created on a throw.
+        const doFetch = () =>
+          fetch(workerUrl("/api/dream"), {
+            method: "POST",
+            body: fd,
+            signal: ac.signal,
+          });
+
+        let res: Response;
+        try {
+          res = await doFetch();
+        } catch (e1) {
+          if ((e1 as Error).name === "AbortError") return;
+          await new Promise((r) => setTimeout(r, 700));
+          if (ac.signal.aborted) return;
+          res = await doFetch();
+        }
 
         if (res.status === 429) {
           setState({
@@ -197,7 +210,8 @@ export function Recorder() {
         if ((err as Error).name === "AbortError") return;
         setState({
           kind: "error",
-          message: err instanceof Error ? err.message : "Network error",
+          message:
+            "Couldn't reach the muse — check your connection and try again.",
           transcript: undefined,
         });
       }

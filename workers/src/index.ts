@@ -14,15 +14,16 @@ const app = new Hono<AppContext>();
 
 app.use("*", logger());
 
+// Public free demo: anonymous (IP-based limits, no cookies). Use wide-open
+// CORS with NO credentials — this is the most robust setup and removes the
+// "Failed to fetch" surface that credentials:include creates on any response
+// that's missing the exact ACAO+ACAC pair (cold starts, edge errors, etc).
 app.use(
   "/api/*",
   cors({
-    // Public free demo: reflect any origin (rate-limited + anon, low risk).
-    // Reflecting the specific origin (not literal "*") keeps credentials valid.
-    origin: (origin) => origin ?? "*",
+    origin: "*",
     allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
   }),
 );
 
@@ -38,9 +39,15 @@ app.route("/api/gallery", galleryRoutes);
 app.route("/api/stripe", stripeRoutes);
 app.route("/api/auth", authRoutes);
 
-app.notFound((c) => c.json({ error: "not_found" }, 404));
+app.notFound((c) => {
+  c.header("Access-Control-Allow-Origin", "*");
+  return c.json({ error: "not_found" }, 404);
+});
 app.onError((err, c) => {
   console.error("unhandled", err);
+  // Always include CORS so the browser surfaces the error instead of a
+  // generic "Failed to fetch".
+  c.header("Access-Control-Allow-Origin", "*");
   return c.json({ error: "internal_error" }, 500);
 });
 
