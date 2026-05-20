@@ -1,6 +1,6 @@
 import type { Env } from "../env";
 
-const PNG_SIG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+// Flux Schnell on Workers AI returns JPEG; accept PNG too for the fal fallback.
 
 export async function generatePanel(
   env: Env,
@@ -90,10 +90,8 @@ function base64ToBytes(b64: string): Uint8Array {
 }
 
 function looksBroken(bytes: Uint8Array): boolean {
-  if (bytes.length < 8) return true;
-  for (let i = 0; i < 8; i++) {
-    if (bytes[i] !== PNG_SIG[i]) return true;
-  }
   if (bytes.length < 5000) return true;
-  return false;
+  const isPng = bytes[0] === 0x89 && bytes[1] === 0x50;
+  const isJpeg = bytes[0] === 0xff && bytes[1] === 0xd8;
+  return !(isPng || isJpeg);
 }
