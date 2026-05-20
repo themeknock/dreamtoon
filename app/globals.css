@@ -1,0 +1,232 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: var(--bg);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-mute: var(--mute);
+  --color-rule: var(--rule);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-accent-deep: var(--accent-deep);
+  --color-link: var(--link);
+  --color-stamp: var(--stamp);
+  --color-soft: var(--soft);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+
+  --font-mono: var(--font-mono-sans);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-fraunces);
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
+
+  --container-page: 1180px;
+
+  --breakpoint-sm: 720px;
+  --breakpoint-md: 960px;
+  --breakpoint-lg: 1180px;
+
+  --ease-dream: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-utility: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:root {
+  --bg: #f6f0e1;
+  --paper: #fdfaf2;
+  --ink: #15140f;
+  --ink-2: #3a362d;
+  --mute: #7a7163;
+  --rule: #e3d8bc;
+
+  /* DreamToon — warm gold (icons + rules only, never body type) */
+  --accent: #b8861f;
+  --accent-2: #e0aa42;
+  --accent-deep: #9a6f15;
+
+  /* Inline link color — terracotta, AA on cream */
+  --link: #8a3a1a;
+
+  /* The single bold accent per page — New Yorker stamp red */
+  --stamp: #b23a1f;
+
+  --soft: #f4dec5;
+
+  --ok: #2f7d4f;
+  --warn: #c98a1c;
+  --bad: #b53d2a;
+
+  /* Dream gradient — 2-stop, no purple. Used on texture surfaces only. */
+  --dream-gradient: linear-gradient(135deg, #b8861f 0%, #d96a36 100%);
+}
+
+[data-theme="dark"] {
+  --bg: #14120d;
+  --paper: #1d1a13;
+  --ink: #f4ecd8;
+  --ink-2: #c8bda2;
+  --mute: #8a8170;
+  --rule: #2b2719;
+  --accent: #e0aa42;
+  --accent-2: #f0c773;
+  --accent-deep: #b8861f;
+  --link: #e08f6a;
+  --stamp: #e07355;
+  --soft: #2a2418;
+  --ok: #6db587;
+  --warn: #e0a847;
+  --bad: #e07355;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: var(--link);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+a:hover {
+  text-decoration-thickness: 2px;
+}
+a.no-underline,
+nav a,
+header a,
+footer a,
+.share-link {
+  text-decoration: none;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+@utility mono {
+  font-family: var(--font-mono);
+  font-feature-settings: "ss01", "ss02";
+}
+
+@utility font-display {
+  font-family: var(--font-display);
+  font-feature-settings: "ss01", "ss02";
+}
+
+@utility cream-bg {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, rgba(0, 0, 0, 0.025) 50%, transparent 51%),
+    radial-gradient(1px 1px at 70% 70%, rgba(0, 0, 0, 0.02) 50%, transparent 51%);
+  background-size: 24px 24px, 32px 32px;
+}
+
+/* Paper grain — fixed SVG noise overlay at ~2% opacity. Cheap, no extra reqs. */
+@utility paper-grain {
+  position: relative;
+}
+@utility paper-grain-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.04;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.08 0 0 0 0 0.07 0 0 0 0 0.05 0 0 0 0.9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+@utility dream-gradient-bg {
+  background-image: var(--dream-gradient);
+}
+
+@utility dream-text {
+  background: var(--dream-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility accent-glow {
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 18%, transparent);
+}
+
+/* Idle breathing — primes the eye toward the mic without screaming */
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.018); }
+}
+@utility breathe {
+  animation: breathe 2.6s ease-in-out infinite;
+}
+
+/* Recording pulse — soft ink halo expanding then dissolving */
+@keyframes rec-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--bad) 55%, transparent); }
+  50% { box-shadow: 0 0 0 14px color-mix(in oklab, var(--bad) 0%, transparent); }
+}
+@utility rec-pulse {
+  animation: rec-pulse 1.4s ease-in-out infinite;
+}
+
+/* Stitch-line — gold-leaf sweep underline that draws across after panel 4 lands */
+@keyframes stitch {
+  0% { transform: scaleX(0); transform-origin: left; opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: scaleX(1); transform-origin: left; opacity: 1; }
+}
+@utility stitch-line {
+  animation: stitch 900ms var(--ease-dream) forwards;
+}
+
+/* Panel fill-in shimmer — drawn during processing while a panel is in flight */
+@keyframes panel-cook {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@utility panel-cook {
+  background: linear-gradient(
+    100deg,
+    color-mix(in oklab, var(--soft) 60%, transparent) 0%,
+    color-mix(in oklab, var(--soft) 100%, transparent) 50%,
+    color-mix(in oklab, var(--soft) 60%, transparent) 100%
+  );
+  background-size: 200% 100%;
+  animation: panel-cook 2.4s ease-in-out infinite;
+}
+
+/* Reveal — panel goes from blurred-faded-shrunk to full-clear */
+@keyframes panel-develop {
+  0% {
+    opacity: 0;
+    transform: scale(0.94);
+    filter: blur(8px) saturate(0.6);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0) saturate(1);
+  }
+}
+@utility panel-develop {
+  animation: panel-develop 700ms var(--ease-dream) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .breathe,
+  .rec-pulse,
+  .panel-cook {
+    animation: none !important;
+  }
+}

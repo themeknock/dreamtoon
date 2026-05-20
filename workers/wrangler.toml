@@ -1,0 +1,45 @@
+name = "dreamtoon-api"
+main = "src/index.ts"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[ai]
+binding = "AI"
+
+[[r2_buckets]]
+binding = "AUDIO_BUCKET"
+bucket_name = "dreamtoon-audio"
+
+[[r2_buckets]]
+binding = "PANELS_BUCKET"
+bucket_name = "dreamtoon-panels"
+
+[[r2_buckets]]
+binding = "COMICS_BUCKET"
+bucket_name = "dreamtoon-comics"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dreamtoon-db"
+database_id = "5f855a20-d18b-482e-b641-e7c8f52692f8"
+migrations_dir = "migrations"
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "1c6ac03613d343599496c2c76c9cfc71"
+
+[vars]
+ENV = "prod"
+CDN_DOMAIN = "cdn.dreamtoon.app"
+# LLM scene composer via OpenRouter (key is a wrangler secret, never in repo).
+# Cheap + reliable + strong JSON. Swap freely — deepseek/deepseek-chat-v3 also great.
+OPENROUTER_MODEL = "google/gemini-2.0-flash-001"
+# Public URL of the frontend — set to your Pages URL after deploy.
+PUBLIC_APP_URL = "http://localhost:3717"
+
+[triggers]
+crons = ["0 3 * * *"]
+
+[observability]
+enabled = true

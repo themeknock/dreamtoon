@@ -1,0 +1,31 @@
+# Local secrets for `wrangler dev`. Copy to `.dev.vars` and fill in.
+# In production these are set via `wrangler secret put NAME` (encrypted on
+# Cloudflare, NEVER committed to the repo).
+#
+# .dev.vars is gitignored. Never paste a real key into .dev.vars.example.
+
+# ── REQUIRED ──────────────────────────────────────────────────────────────
+# OpenRouter key — powers the Claude scene composer.
+# Get one at https://openrouter.ai/keys . Set a credit limit on the key to
+# cap spend for a public demo.
+OPENROUTER_API_KEY=sk-or-...
+
+# Salt for IP hashing (rate-limit privacy). Any random string.
+#   openssl rand -base64 32
+IP_HASH_SALT=local-dev-salt-replace-in-prod
+
+# Frontend public URL — Stripe redirects + magic links. Pages URL in prod.
+PUBLIC_APP_URL=http://localhost:3717
+
+# ── OPTIONAL (anon free demo works without all of these) ───────────────────
+# Stripe — only for the $3/mo Pro upgrade.
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PRICE_ID=
+
+# Magic-link email — only for sign-in / saved history.
+RESEND_API_KEY=
+BETTER_AUTH_SECRET=
+
+# fal.ai — only as a Flux fallback if Workers AI fails twice.
+FAL_KEY=

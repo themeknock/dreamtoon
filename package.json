@@ -1,0 +1,33 @@
+{
+  "name": "dreamtoon",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 3717",
+    "build": "next build",
+    "start": "next start -p 3717",
+    "typecheck": "tsc --noEmit",
+    "workers:dev": "cd workers && wrangler dev --port 8787",
+    "workers:deploy": "cd workers && wrangler deploy"
+  },
+  "dependencies": {
+    "next": "16.2.6",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.4",
+    "lucide-react": "^0.460.0",
+    "@radix-ui/react-slot": "^1.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.1",
+    "@types/react": "^19.0.1",
+    "@types/react-dom": "^19.0.1",
+    "tailwindcss": "^4.1.13",
+    "@tailwindcss/postcss": "^4.1.13",
+    "postcss": "^8.4.49"
+  }
+}
