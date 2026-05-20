@@ -5,6 +5,9 @@ import { users, usage } from "../db/schema";
 
 const FREE_DAILY = 3;
 const PRO_DAILY_SOFT = 100;
+// Hard global ceiling across ALL users — cost circuit-breaker for the public
+// demo. ~300 comics/day ≈ a few dollars max. Bump when you want more headroom.
+const GLOBAL_DAILY = 300;
 
 export type LimitResult =
   | { ok: true; remaining: number; cap: number }
@@ -18,6 +21,17 @@ export async function checkRateLimit(
   const day = utcDay();
   const actorId = userId ?? ipHash;
   const key = kvKey(actorId, day);
+
+  // Global cost circuit-breaker first.
+  const globalKey = `rl:global:${day}`;
+  const globalCount = parseInt(
+    (await env.RATE_LIMIT_KV.get(globalKey)) ?? "0",
+    10,
+  );
+  if (globalCount >= GLOBAL_DAILY) {
+    const resetAt = Math.floor(Date.now() / 1000) + 86400;
+    return { ok: false, resetAt, cap: GLOBAL_DAILY };
+  }
 
   let cap = FREE_DAILY;
   if (userId) {
@@ -48,6 +62,16 @@ export async function incrementUsage(
 
   const current = parseInt((await env.RATE_LIMIT_KV.get(key)) ?? "0", 10);
   await env.RATE_LIMIT_KV.put(key, String(current + 1), {
+    expirationTtl: 60 * 60 * 26,
+  });
+
+  // Bump global daily counter (cost circuit-breaker).
+  const globalKey = `rl:global:${day}`;
+  const globalCount = parseInt(
+    (await env.RATE_LIMIT_KV.get(globalKey)) ?? "0",
+    10,
+  );
+  await env.RATE_LIMIT_KV.put(globalKey, String(globalCount + 1), {
     expirationTtl: 60 * 60 * 26,
   });
 

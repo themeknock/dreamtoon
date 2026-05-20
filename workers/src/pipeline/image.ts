@@ -5,6 +5,11 @@ import {
   SamplingFilter,
 } from "@cf-wasm/photon";
 import type { Scene } from "./compose";
+import {
+  WATERMARK_B64,
+  WATERMARK_W,
+  WATERMARK_H,
+} from "../assets/watermark";
 
 const CELL = 1024;
 const CANVAS = CELL * 2;
@@ -14,16 +19,22 @@ const POS: ReadonlyArray<readonly [number, number]> = [
   [0, CELL],
   [CELL, CELL],
 ];
+const WM_PAD = 44;
+
+function b64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
 
 /**
- * Compose 4 panel images (JPEG from Flux) into a 2048×2048 2×2 grid PNG.
+ * Compose 4 panel images (JPEG from Flux) into a 2048×2048 2×2 grid PNG,
+ * then bake the "dreamtoon.app" watermark into the bottom-right corner.
  *
- * Robust path: no hand-crafted canvas/watermark PNGs (those panic photon
- * with "unreachable"). We resize panel 0 to the full canvas as a base — it's
- * fully covered by the 4 cells — then composite each 1024² cell on top.
- *
- * TODO(polish): cream gutters + baked "dreamtoon.app" watermark. Needs a
- * valid pre-encoded PNG asset or an SVG→PNG step (@resvg/resvg-wasm).
+ * Base = panel 0 upscaled to full canvas (fully covered by the 4 cells), so
+ * no fragile hand-crafted canvas PNG. Watermark is a real pre-encoded PNG
+ * asset (photon panics on invalid bytes).
  */
 export async function composeImage(
   panels: Uint8Array[],
@@ -43,6 +54,17 @@ export async function composeImage(
     const [x, y] = POS[i]!;
     watermark(base, cell, BigInt(x), BigInt(y));
     cell.free();
+  }
+
+  // Bottom-right brand watermark.
+  try {
+    const wm = PhotonImage.new_from_byteslice(b64ToBytes(WATERMARK_B64));
+    const wmX = CANVAS - WATERMARK_W - WM_PAD;
+    const wmY = CANVAS - WATERMARK_H - WM_PAD;
+    watermark(base, wm, BigInt(wmX), BigInt(wmY));
+    wm.free();
+  } catch (e) {
+    console.warn("watermark_composite_failed", String(e));
   }
 
   const out = base.get_bytes();
