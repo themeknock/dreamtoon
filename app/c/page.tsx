@@ -20,13 +20,26 @@ function ComicView() {
     }
     let alive = true;
     setLoading(true);
-    fetchComic(id)
-      .then((c) => {
-        if (alive) setComic(c);
-      })
-      .finally(() => {
-        if (alive) setLoading(false);
-      });
+
+    // A comic opened right after generation can race D1's read-after-write.
+    // Retry a few times with backoff before giving up.
+    const run = async () => {
+      const delays = [0, 700, 1200, 2000];
+      for (let i = 0; i < delays.length; i++) {
+        if (!alive) return;
+        if (delays[i]) await new Promise((r) => setTimeout(r, delays[i]));
+        const c = await fetchComic(id).catch(() => null);
+        if (!alive) return;
+        if (c) {
+          setComic(c);
+          setLoading(false);
+          return;
+        }
+      }
+      if (alive) setLoading(false);
+    };
+    void run();
+
     return () => {
       alive = false;
     };
