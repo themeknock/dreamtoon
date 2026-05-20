@@ -142,13 +142,30 @@ dreamRoutes.post("/", async (c) => {
 
       stage = "flux";
       await emit("status", { stage: "drawing" });
-      const panelPromises = scene.panels.map((p, i) =>
-        generatePanel(c.env, p.prompt, i + 1).then(async (bytes) => {
-          await emit("panel_ready", { index: i + 1 });
-          return bytes;
-        }),
+      const panelResults = await Promise.allSettled(
+        scene.panels.map((p, i) =>
+          generatePanel(c.env, p.prompt, i + 1).then(async (bytes) => {
+            await emit("panel_ready", { index: i + 1 });
+            return bytes;
+          }),
+        ),
       );
-      const panelBytes = await Promise.all(panelPromises);
+
+      // Never fail the whole comic over one bad panel — substitute a failed
+      // panel with any successful sibling so we always have 4. Only error if
+      // every panel failed.
+      const ok = panelResults
+        .filter(
+          (r): r is PromiseFulfilledResult<Uint8Array> =>
+            r.status === "fulfilled",
+        )
+        .map((r) => r.value);
+      if (ok.length === 0) {
+        throw new Error("flux_all_panels_failed");
+      }
+      const panelBytes = panelResults.map((r, i) =>
+        r.status === "fulfilled" ? r.value : ok[i % ok.length]!,
+      );
 
       stage = "compose_image";
       await emit("status", { stage: "composing" });
@@ -196,7 +213,7 @@ dreamRoutes.post("/", async (c) => {
         code: "pipeline_failed",
         stage,
         message: "the muse was offline — try again?",
-        detail: String(err).slice(0, 300),
+        detail: String(err).slice(0, 600),
       });
     }
   });

@@ -9,28 +9,37 @@ export async function generatePanel(
 ): Promise<Uint8Array> {
   const baseSeed = Math.floor(Math.random() * 1_000_000) + panelIndex * 1009;
 
-  // Try Workers AI Flux Schnell first
-  try {
-    const bytes = await runWorkersAi(env, prompt, baseSeed);
-    if (!looksBroken(bytes)) return bytes;
-  } catch (e) {
-    console.warn("flux_workers_ai_failed_attempt_1", e);
+  // Workers AI Flux occasionally errors or returns a broken frame under load.
+  // Retry several times with a fresh seed + small backoff before giving up.
+  for (let i = 0; i < 3; i++) {
+    try {
+      const bytes = await runWorkersAi(env, prompt, baseSeed + i * 7919);
+      if (!looksBroken(bytes)) return bytes;
+    } catch (e) {
+      console.warn(`flux_workers_ai_failed_attempt_${i + 1}`, String(e));
+    }
+    if (i < 2) await new Promise((r) => setTimeout(r, 400 * (i + 1)));
   }
 
-  // Retry once with reseed
-  try {
-    const bytes = await runWorkersAi(env, prompt, baseSeed + 7919);
-    if (!looksBroken(bytes)) return bytes;
-  } catch (e) {
-    console.warn("flux_workers_ai_failed_attempt_2", e);
-  }
-
-  // fal.ai fallback
+  // fal.ai fallback (only if a key is configured)
   if (env.FAL_KEY) {
-    return runFal(env, prompt);
+    try {
+      return await runFal(env, prompt);
+    } catch (e) {
+      console.warn("flux_fal_failed", String(e));
+    }
   }
 
   throw new Error(`flux_panel_${panelIndex}_failed`);
+}
+
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label}_timeout`)), ms),
+    ),
+  ]);
 }
 
 async function runWorkersAi(
@@ -38,11 +47,17 @@ async function runWorkersAi(
   prompt: string,
   seed: number,
 ): Promise<Uint8Array> {
-  const resp = (await env.AI.run("@cf/black-forest-labs/flux-1-schnell" as never, {
-    prompt,
-    steps: 4,
-    seed,
-  } as never)) as { image?: string } | ReadableStream | unknown;
+  // Cap each call so a hung Workers AI request can't stall the whole pipeline
+  // (we saw a 130s hang). On timeout we move to the next retry / fallback.
+  const resp = (await withTimeout(
+    env.AI.run("@cf/black-forest-labs/flux-1-schnell" as never, {
+      prompt,
+      steps: 4,
+      seed,
+    } as never) as Promise<unknown>,
+    20_000,
+    "flux",
+  )) as { image?: string } | ReadableStream | unknown;
 
   if (resp instanceof ReadableStream) {
     const buf = await new Response(resp).arrayBuffer();
